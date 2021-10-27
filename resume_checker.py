@@ -14,8 +14,8 @@ from configs import file_net_path as fp, phone_input as p_i, pass_input as p_wor
 opts = Options()
 opts.add_argument("--no-sandbox") # For running headless with no defined user to avoid errors
 
-
-while True:
+count = 0
+while count < 1:
     term_ = input("Enter the phrase you want to use in the job search query => ")
     if term_ == "q":
         break
@@ -32,15 +32,16 @@ while True:
         sleep(2)
         p_word_input = driver.find_element(By.XPATH, "//*[@id='session_password']")
         p_word_input.send_keys(p_word)  # send pass cred
-        click_login = driver.find_element(By.CLASS_NAME, "sign-in-form__submit-button").click()
+        driver.find_element(By.CLASS_NAME, "sign-in-form__submit-button").click()
         sleep(5)  # Longer delay to ensure page elements completely load
         # From homepage, search a job
-        job_button = driver.find_element(By.LINK_TEXT, "Jobs").click()
+        driver.find_element(By.LINK_TEXT, "Jobs").click()
         sleep(2)
-        job_search = driver.find_element(By.TAG_NAME, "input")
-        job_search.send_keys(term_)
+        driver.find_element(By.TAG_NAME, "input").send_keys(term_)
+        driver.find_element(By.TAG_NAME, "input").send_keys(Keys.RETURN)
         # For simplicity instead of targeting 'Search' btn
-        press_enter = driver.find_element(By.TAG_NAME, "input").send_keys(Keys.RETURN)
+        sleep(10)
+        count += 1
         #  # Pass a tuple to expected conditions...
         # element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "job-details")))
         # description_select = driver.find_element(By.ID, "job-details").send_keys(Keys.CONTROL+"a")
