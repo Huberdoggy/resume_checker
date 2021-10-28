@@ -1,54 +1,56 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.common.by import By # for find_element args
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import docx2txt
+import os
+import re
+import sys
 from time import sleep
-# Custom imports from secrets (configs)
-from configs import file_net_path as fp, phone_input as p_i, pass_input as p_word
+from termcolor import cprint, colored
+from sklearn.metrics.pairwise import cosine_similarity
+from configs import file_net_path as saved_net_res, job_net_path as testjob
+# Custom imports from secrets (configs) and defs
+from setup_defs import compile_patterns, screen_clear, make_menu, format_main_menu, read_local_res, read_local_job,\
+    create_vectorized_obj
 
-opts = Options()
-opts.add_argument("--no-sandbox") # For running headless with no defined user to avoid errors
+print_red = lambda x: cprint(x, 'red')  # Simplified Lamda initializations..
+welcome_txt = "Kyle\'s Resume Checker"
+opts_lst = ['Compare Resume Against Saved Job Description', 'Browse For Job Description Online', 'Quit']
+loc_res = os.getcwd() + '/res_files/local_res.txt'
+loc_job_desc = os.getcwd() + '/res_files/loc_job_desc.txt'
+farewell = "Thank you for using the app. Good-bye!"
+reg_patterns = {
+    'menu_sel_pattern': '^[1-3]{1}',
+}
+valid_int = False
+raw_reg_dict = compile_patterns(reg_patterns)
+# for pattern in raw_reg_dict:
+#     print(f"Pattern is {pattern} and type is {raw_reg_dict[pattern]}")
+opts_dict = make_menu(opts_lst[0], opts_lst[1], opts_lst[2])
 
-count = 0
-while count < 1:
-    term_ = input("Enter the phrase you want to use in the job search query => ")
-    if term_ == "q":
-        break
+while not valid_int:
+    screen_clear()
+    format_main_menu(welcome_txt, opts_dict)
+    choice = input("=> ").strip()
+    if re.fullmatch(raw_reg_dict.get('menu_sel_pattern', 'Empty'), choice):
+        valid_int = True
+        choice = int(choice)
+        if choice == 1:
+            dump_res = read_local_res(saved_net_res, loc_res)
+            dump_job_desc = read_local_job(testjob, loc_job_desc)
+            c_matrix = create_vectorized_obj(dump_res, dump_job_desc)
+            print(f"Similarity Scores:\n{cosine_similarity(c_matrix)}")
+            # Now, covert that data to percentage for friendly viewing, pull col value ..
+            match_percentage = cosine_similarity(c_matrix)[0][1] * 100
+            match_percentage = round(match_percentage, 2) # 2 decimal places
+            if match_percentage < 50:
+                match_percentage = colored(str(match_percentage) + '%', 'red')
+            else:
+                match_percentage = colored(str(match_percentage) + '%', 'green')
+            print(f"\nKyle's resume matches approximately {(match_percentage)}"
+                  f" of the job description.")
+        elif choice == 2:
+            pass
+        elif choice == 3:
+            screen_clear()
+            print(farewell)
+            sys.exit(0)
     else:
-        # Store chrome driver methods
-        # This will bypass the need to install/point the code to a chrome driver executable
-        s = Service(ChromeDriverManager().install())  # we create/pass an object to bypass deprecation warning
-        driver = webdriver.Chrome(service=s)
-        # Open target URL
-        driver.get("https://www.linkedin.com")
-        sleep(2)
-        u_name_input = driver.find_element(By.XPATH, "//*[@id='session_key']")
-        u_name_input.send_keys(p_i)  # send phone number cred
-        sleep(2)
-        p_word_input = driver.find_element(By.XPATH, "//*[@id='session_password']")
-        p_word_input.send_keys(p_word)  # send pass cred
-        driver.find_element(By.CLASS_NAME, "sign-in-form__submit-button").click()
-        sleep(5)  # Longer delay to ensure page elements completely load
-        # From homepage, search a job
-        driver.find_element(By.LINK_TEXT, "Jobs").click()
-        sleep(2)
-        driver.find_element(By.TAG_NAME, "input").send_keys(term_)
-        driver.find_element(By.TAG_NAME, "input").send_keys(Keys.RETURN)
-        # For simplicity instead of targeting 'Search' btn
-        sleep(10)
-        count += 1
-        #  # Pass a tuple to expected conditions...
-        # element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "job-details")))
-        # description_select = driver.find_element(By.ID, "job-details").send_keys(Keys.CONTROL+"a")
-        # sleep(5)
-
-        # resume = docx2txt.process(fp)
-        # print(resume)
-
-
-
+        print_red(f"Input {choice.strip()} is invalid. Please enter an option number.")
+        sleep(1)  # will give user time to read error before infinite menu loop repeats
